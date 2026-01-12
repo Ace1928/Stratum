@@ -21,6 +21,22 @@ from enum import Enum
 
 import numpy as np
 
+# Numerical stability constants for conservation calculations
+# These limits are chosen to be well within float64 range (~1e308) while
+# leaving headroom for intermediate calculations.
+
+#: Minimum density threshold below which mass is considered negligible
+RHO_EPSILON = 1e-12
+
+#: Maximum density to prevent overflow in kinetic energy calculation
+RHO_MAX_CLAMP = 1e150
+
+#: Maximum momentum component before clamping (sqrt of max squared sum)
+MOMENTUM_MAX_CLAMP = 1e75
+
+#: Maximum kinetic energy per cell
+KINETIC_ENERGY_MAX = 1e100
+
 
 class FluxType(Enum):
     """Types of mass/energy flux that can occur."""
@@ -389,19 +405,19 @@ class ConservationLedger:
         py = fabric.py
         
         # Avoid division by zero and overflow
-        mask = (rho > 1e-12) & np.isfinite(rho)
+        mask = (rho > RHO_EPSILON) & np.isfinite(rho)
         ke = np.zeros_like(rho)
         
         # Clamp momentum to prevent overflow in squaring
-        px_safe = np.clip(px[mask], -1e75, 1e75)
-        py_safe = np.clip(py[mask], -1e75, 1e75)
-        rho_safe = np.clip(rho[mask], 1e-12, 1e150)
+        px_safe = np.clip(px[mask], -MOMENTUM_MAX_CLAMP, MOMENTUM_MAX_CLAMP)
+        py_safe = np.clip(py[mask], -MOMENTUM_MAX_CLAMP, MOMENTUM_MAX_CLAMP)
+        rho_safe = np.clip(rho[mask], RHO_EPSILON, RHO_MAX_CLAMP)
         
         ke[mask] = (px_safe**2 + py_safe**2) / (2.0 * rho_safe)
         
         # Clamp any infinities or NaNs
         ke = np.where(np.isfinite(ke), ke, 0.0)
-        ke = np.clip(ke, 0, 1e100)
+        ke = np.clip(ke, 0, KINETIC_ENERGY_MAX)
         
         return float(np.sum(ke))
 

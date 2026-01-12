@@ -31,6 +31,10 @@ from .fabric import Fabric, Mixture
 from .registry import SpeciesRegistry
 from . import types as ttypes
 
+# Numerical stability constants
+#: Maximum energy delta to prevent downstream overflow in energy conversions
+ENERGY_DELTA_MAX = 1e50
+
 
 class SignalType:
     """Signal type constants for the propagation system."""
@@ -508,7 +512,7 @@ class Quanta:
                     if not math.isfinite(raw_dE) or raw_dE <= 0.0:
                         dE = 0.0
                     else:
-                        dE = min(raw_dE, 1e50)  # Cap to prevent overflow downstream
+                        dE = min(raw_dE, ENERGY_DELTA_MAX)
                 # convert to heat; allocate some to radiation based on opacity and T
                 f_rad = clamp((1.0 - opacity_eff) * (T / (T + 1.0)), 0.0, 1.0)
                 self.ledger.convert_kinetic_to_heat(i, j, dE, f_rad)

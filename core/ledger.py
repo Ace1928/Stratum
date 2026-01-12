@@ -25,6 +25,22 @@ import numpy as np
 
 from .types import Vec2, dot, clamp
 
+# Numerical stability constants
+# These limits are chosen to be well within float64 range (~1e308) while
+# leaving headroom for intermediate calculations.
+
+#: Minimum density threshold below which mass is considered negligible
+RHO_EPSILON = 1e-12
+
+#: Maximum density for kinetic energy calculation to prevent overflow
+RHO_MAX_CLAMP = 1e150
+
+#: Maximum squared momentum sum before clamping
+MOMENTUM_SQ_MAX = 1e300
+
+#: Maximum kinetic energy result
+KINETIC_ENERGY_MAX = 1e100
+
 
 @dataclass
 class EntropyRecord:
@@ -207,24 +223,23 @@ class Ledger:
         clamp the result to a large but finite value.  When ``rho`` is
         very small, we return zero to prevent division by zero.
         """
-        if rho <= 1e-12:
+        if rho <= RHO_EPSILON:
             # negligible mass: treat kinetic energy as zero
             return 0.0
         # Clamp rho to prevent overflow in the division
-        rho_clamped = min(rho, 1e150)
+        rho_clamped = min(rho, RHO_MAX_CLAMP)
         # Compute squared momentum magnitude using multiplication to
         # avoid ``**`` overflow.  Use Python floats (double precision).
         px = float(p.x)
         py = float(p.y)
         sum_sq = px * px + py * py
         # Clamp to a large finite value to avoid inf during division.
-        # 1e300 is within double precision range (~1e308).
-        if not math.isfinite(sum_sq) or sum_sq > 1e300:
-            sum_sq = 1e300
+        if not math.isfinite(sum_sq) or sum_sq > MOMENTUM_SQ_MAX:
+            sum_sq = MOMENTUM_SQ_MAX
         result = sum_sq / (2.0 * rho_clamped)
         # Final clamp to ensure result is finite
-        if not math.isfinite(result) or result > 1e100:
-            return 1e100
+        if not math.isfinite(result) or result > KINETIC_ENERGY_MAX:
+            return KINETIC_ENERGY_MAX
         return result
 
     def barrier_crossed(
