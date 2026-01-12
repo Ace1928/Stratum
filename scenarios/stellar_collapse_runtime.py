@@ -235,7 +235,8 @@ def run_stellar_collapse_runtime(
     print(f"Snapshots zipped at {zip_path}")
 
 
-if __name__ == "__main__":
+def main():
+    """Entry point for the runtime-controlled stellar collapse scenario."""
     import argparse
 
     parser = argparse.ArgumentParser(description="Run stellar collapse simulation for a fixed runtime.")
@@ -252,3 +253,7 @@ if __name__ == "__main__":
         snapshot_interval=args.snapshot,
         output_dir=args.output,
     )
+
+
+if __name__ == "__main__":
+    main()

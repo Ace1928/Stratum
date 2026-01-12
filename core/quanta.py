@@ -275,15 +275,35 @@ class Quanta:
         # determine active cells: top cells with high grad or overfill or high Z
         # flatten arrays to rank
         scores = grad_rho_mag + overfill + np.maximum(derived.Z_field - self.cfg.Z_fuse_min * 0.5, 0.0)
-        # Flatten indices sorted by descending score.  When all scores are equal (e.g. uniform
-        # initial conditions), this ordering is arbitrary but stable.  We pick the top
-        # ``active_region_max`` cells regardless of the absolute score so that microticks
-        # always run on some subset of the grid even in symmetric states.  Without this
-        # fallback, perfectly uniform initial conditions would result in no active cells
-        # and hence no microtick dynamics.
-        flat_indices = np.argsort(scores, axis=None)[::-1]
+        
+        # Use argpartition for O(N) top-K selection instead of O(N log N) argsort
+        # When all scores are equal (e.g. uniform initial conditions), this ordering
+        # is arbitrary but stable. We pick the top ``active_region_max`` cells
+        # regardless of the absolute score so that microticks always run on some
+        # subset of the grid even in symmetric states.
+        flat_scores = scores.ravel()
+        n_total = len(flat_scores)
+        n_active = min(self.cfg.active_region_max, n_total)
+        
+        if n_active > 0 and n_total > n_active:
+            # Use argpartition for O(N) selection of top K elements
+            # argpartition gives us indices where the K-th element is in its final position
+            # and all elements before it are smaller (unordered) and after are larger (unordered)
+            # We want the LARGEST K elements, so we partition at (n_total - n_active)
+            partition_idx = n_total - n_active
+            partitioned_indices = np.argpartition(flat_scores, partition_idx)
+            top_k_indices = partitioned_indices[partition_idx:]
+            
+            # Sort only the top K elements for consistent ordering (optional but good for reproducibility)
+            top_k_scores = flat_scores[top_k_indices]
+            sorted_within_topk = np.argsort(top_k_scores)[::-1]
+            flat_indices = top_k_indices[sorted_within_topk]
+        else:
+            # If we want all or more cells than exist, just take all (sorted)
+            flat_indices = np.argsort(flat_scores)[::-1][:n_active]
+        
         active_cells: List[Tuple[int, int]] = []
-        for idx in flat_indices[: min(self.cfg.active_region_max, len(flat_indices))]:
+        for idx in flat_indices:
             i = idx // H
             j = idx % H
             active_cells.append((i, j))

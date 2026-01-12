@@ -1,54 +1,30 @@
 # Stratum - Emergent Layered Physical Simulation Engine
 
-Stratum is a prototype simulation engine designed to model emergent, layered physical phenomena. It provides a framework for simulating complex physical systems with multiple interacting scales, from stellar dynamics to chemical reactions.
+Stratum is a production-grade simulation engine designed to model emergent, layered physical phenomena. It provides a deterministic, conservation-aware framework for simulating complex physical systems with multiple interacting scales.
 
-## Overview
+## Key Features
 
-The Stratum engine implements a hierarchical simulation architecture with:
+- **Deterministic Execution**: Reproducible results with blake2s-based entropy, configurable determinism modes
+- **Conservation Accounting**: Track mass, energy, and momentum with source/sink ledger
+- **Event System**: Subscribe to simulation events for game integration
+- **Boundary-Aware**: PERIODIC, REFLECTIVE, and OPEN boundary conditions with universal enforcement
+- **High Performance**: Cached derived fields, efficient top-K selection, patch-based scheduling
+- **Extensible Architecture**: Plugin interfaces for domain packs and custom physics
 
-- **Core Engine**: Handles the fundamental simulation mechanics including configuration, field storage, event scheduling, and signal propagation
-- **Domain Modules**: Implement specific physical behaviors like high-energy materials physics
-- **Scenarios**: Define complete simulation setups and run configurations
+## Quick Start
 
-## Features
+```bash
+# Install from source
+pip install -e .
 
-- **Grid-based simulation** with configurable dimensions and boundary conditions (periodic, reflective, open)
-- **Multi-scale physics** with microtick-based local resolution and global diffusion operators
-- **Species registry** for tracking material compositions with quantized high-energy properties
-- **Deterministic replay** support via entropy source recording
-- **High-energy event handling** including:
-  - Fusion reactions
-  - Decay processes
-  - Degenerate matter transitions
-  - Black hole formation
-- **Signal propagation** system for influence, radiation, and impulse delivery
-- **Dynamic level-of-detail** (LOD) for performance optimization
+# Run the stellar collapse demo
+python -m scenarios.stellar_collapse --grid 32 --ticks 100
 
-## Architecture
+# Run the real-time screensaver
+python -m scenarios.stellar_screensaver --grid 128
 
-```
-stratum/
-├── core/                  # Core engine components
-│   ├── config.py          # EngineConfig dataclass with simulation parameters
-│   ├── fabric.py          # Fabric class for field storage and spatial operations
-│   ├── ledger.py          # Energy conservation and entropy management
-│   ├── metronome.py       # Timing and compute budget allocation
-│   ├── quanta.py          # Event propagation and microtick resolution
-│   ├── registry.py        # Species registry with property quantization
-│   └── types.py           # Core type definitions (Vec2, Cell, etc.)
-├── domains/               # Domain-specific physics modules
-│   └── materials/         # High-energy materials subsystem
-│       ├── __init__.py
-│       └── fundamentals.py # Material rules, EOS, fusion/decay/BH logic
-├── scenarios/             # Simulation scenarios
-│   ├── stellar_collapse.py           # Basic stellar collapse scenario
-│   ├── stellar_collapse_runtime.py   # Runtime-controlled simulation
-│   └── stellar_screensaver.py        # Real-time Pygame visualizer
-├── util/                  # Utilities
-│   └── classregistry.py   # Code introspection utility
-└── tests/                 # Comprehensive test suite
-    ├── conftest.py        # Pytest configuration
-    ├── test_*.py          # Unit and integration tests
+# Verify determinism
+python tests/golden_checksum.py --seed 42 --ticks 100 --runs 3
 ```
 
 ## Installation
@@ -56,191 +32,253 @@ stratum/
 ### Requirements
 
 - Python 3.9+
-- NumPy
-- Matplotlib (for image generation)
-- Pygame (optional, for real-time visualization)
+- NumPy >= 1.20.0
 
-### Install Dependencies
+### Optional Dependencies
+
+- Matplotlib (for snapshot visualization)
+- Pygame (for real-time screensaver)
+
+### Install
 
 ```bash
-pip install -r requirements.txt
+# Basic installation
+pip install -e .
+
+# With visualization support
+pip install -e ".[viz]"
+
+# With development tools
+pip install -e ".[dev]"
+
+# Everything
+pip install -e ".[all]"
 ```
 
-## Usage
+## Architecture
 
-### Running the Basic Simulation
-
-```bash
-# Run the stellar collapse scenario
-python -m scenarios.stellar_collapse
-
-# Run with custom parameters
-python -c "
-from scenarios.stellar_collapse import run_stellar_collapse
-run_stellar_collapse(grid_size=64, num_ticks=1000)
-"
+```
+stratum/
+├── core/                  # Core engine components
+│   ├── config.py          # EngineConfig with determinism modes
+│   ├── conservation.py    # Conservation ledger (mass/energy/momentum)
+│   ├── events.py          # EventBus for game integration
+│   ├── fabric.py          # Field storage with boundary handling
+│   ├── ledger.py          # Energy accounting with blake2s entropy
+│   ├── metronome.py       # Timing and budget allocation
+│   ├── ordering.py        # Canonical iteration ordering
+│   ├── quanta.py          # Microtick resolution with cached fields
+│   ├── registry.py        # Species registry with versioning
+│   └── types.py           # Core type definitions
+├── domains/               # Domain-specific physics
+│   └── materials/         # High-energy materials subsystem
+├── scenarios/             # Runnable scenarios
+│   ├── stellar_collapse.py
+│   ├── stellar_collapse_runtime.py
+│   └── stellar_screensaver.py
+└── tests/                 # Test suite (212+ tests)
+    ├── test_determinism.py
+    ├── test_properties.py
+    └── golden_checksum.py
 ```
 
-### Runtime-Controlled Simulation
+## Determinism Modes
 
-Run a simulation for a specific wall-clock duration:
+Stratum provides three determinism levels:
 
-```bash
-# Run for 30 seconds with snapshots every second
-python -m scenarios.stellar_collapse_runtime --runtime 30 --snapshot 1.0
+```python
+from core.config import EngineConfig, DeterminismMode
 
-# With custom parameters
-python -m scenarios.stellar_collapse_runtime \
-    --grid 64 \
-    --runtime 60 \
-    --microticks 500 \
-    --snapshot 2.0 \
-    --output ./my_outputs
+# Bitwise-identical results (same seed + version = same checksum)
+config = EngineConfig(
+    determinism_mode=DeterminismMode.STRICT_DETERMINISTIC,
+    entropy_mode=False,
+)
+
+# Statistically reproducible (allows adaptive scheduling)
+config = EngineConfig(
+    determinism_mode=DeterminismMode.REPLAY_DETERMINISTIC,
+)
+
+# Maximum performance (may vary between runs)
+config = EngineConfig(
+    determinism_mode=DeterminismMode.REALTIME_ADAPTIVE,
+    entropy_mode=True,
+)
 ```
 
-### Real-Time Screensaver
-
-Launch the interactive Pygame visualization:
+### Verify Determinism
 
 ```bash
-# Auto-size to display
-python -m scenarios.stellar_screensaver
+# Run golden checksum test
+python tests/golden_checksum.py --seed 42 --ticks 100 --runs 3
 
-# With custom grid and FPS
-python -m scenarios.stellar_screensaver --grid 256 --fps 60
+# Output:
+# ✅ PASS: All runs produced identical checksums
+#    Final state: da6fc0c104454a9f94b5bac57f986d3804f32f7f1c32b556597516e5d578ffdf
+```
 
-# Controls:
-#   ESC/Q: Quit
-#   SPACE: Pause/Resume
-#   R: Restart with new seed
-#   TAB: Toggle log scaling
-#   1/2: Bias LOD toward speed/quality
-#   +/-: Adjust target FPS
+## Conservation Tracking
+
+Track mass, energy, and momentum conservation:
+
+```python
+from core.conservation import ConservationLedger
+
+ledger = ConservationLedger(tolerance=1e-6)
+
+# In simulation loop
+ledger.begin_tick(tick, fabric)
+# ... simulation step ...
+ledger.record_boundary_flux(tick, cell, mass_delta, energy_delta)
+ledger.record_bh_absorption(tick, cell, mass, energy)
+stats = ledger.end_tick(tick, fabric)
+
+# Check conservation
+is_ok, msg = ledger.check_conservation()
+print(f"Conservation: {msg}")
+```
+
+## Event System
+
+Subscribe to simulation events for game integration:
+
+```python
+from core.events import EventBus, EventType
+
+bus = EventBus(buffer_size=10000)
+
+def on_bh_formed(event):
+    print(f"Black hole formed at {event.cell} with mass {event.data['initial_mass']}")
+
+bus.subscribe(EventType.BLACK_HOLE_FORMED, on_bh_formed)
+
+# In simulation, emit events
+bus.emit(EventType.BLACK_HOLE_FORMED, tick=100, cell=(5, 5), 
+         data={'initial_mass': 10.0, 'trigger_Z': 4.5})
+
+# Query events
+recent_bh = bus.get_events(EventType.BLACK_HOLE_FORMED, limit=10)
 ```
 
 ## Configuration
 
-The `EngineConfig` dataclass controls all simulation parameters:
-
 ```python
-from core.config import EngineConfig
+from core.config import EngineConfig, DeterminismMode, NegativeDensityPolicy
 
 config = EngineConfig(
-    # Grid dimensions
+    # Grid
     grid_w=128,
     grid_h=128,
+    dx=1.0,  # Grid spacing
+    dt_tick=1.0,  # Time per tick
     
-    # Random seed for reproducibility
+    # Determinism
+    determinism_mode=DeterminismMode.STRICT_DETERMINISTIC,
     base_seed=42,
-    entropy_mode=False,  # Set True for run-to-run variation
     
-    # Boundary condition: PERIODIC, REFLECTIVE, or OPEN
-    boundary="PERIODIC",
+    # Boundaries
+    boundary="PERIODIC",  # PERIODIC, REFLECTIVE, or OPEN
+    negative_density_policy=NegativeDensityPolicy.CLAMP_ZERO,
     
-    # Physics parameters
+    # Stability
+    cfl_safety_factor=0.5,
+    diffusion_stability_limit=0.25,
+    
+    # Physics
     gravity_strength=0.05,
-    eos_gamma=2.0,
     thermal_pressure_coeff=0.1,
     
-    # High-energy thresholds
-    Z_fuse_min=1.5,   # Fusion threshold
-    Z_deg_min=3.0,    # Degeneracy threshold
-    Z_bh_min=4.5,     # Black hole threshold
+    # Conservation
+    enforce_mass_conservation=False,
+    enforce_energy_bounds=True,
+    
+    # World law version (for replay compatibility)
+    world_law_version="1.0.0",
 )
 ```
 
-## Core Concepts
+## Scenarios
 
-### Fabric
+### Stellar Collapse
 
-The `Fabric` class stores all spatial field data:
-- `rho`: Mass density
-- `px`, `py`: Momentum components
-- `E_heat`, `E_rad`: Heat and radiation energy
-- `influence`: Gravitational influence field
-- `BH_mass`: Black hole mass accumulator
-- `EH_mask`: Event horizon mask
-- `mixtures`: Per-cell species composition
+```bash
+python -m scenarios.stellar_collapse \
+    --grid 64 \
+    --ticks 500 \
+    --microticks 200 \
+    --output ./outputs
+```
 
-### Species Registry
+### Runtime-Controlled
 
-Species are identified by quantized high-energy (HE) properties:
-- `HE/rho_max`: Maximum packing density
-- `HE/chi`: EOS stiffness coefficient
-- `HE/eta`: Viscosity
-- `HE/opacity`: Radiation opacity
-- `HE/beta`: Binding depth
-- `HE/lambda`: Decay instability
-- And more...
+```bash
+python -m scenarios.stellar_collapse_runtime \
+    --grid 64 \
+    --runtime 60 \
+    --snapshot 2.0
+```
 
-### Quanta System
+### Interactive Screensaver
 
-The Quanta subsystem handles:
-1. **Signal delivery**: Influence, radiation, and impulse signals
-2. **Active region selection**: Identifies cells requiring detailed simulation
-3. **Microtick resolution**: Local physics updates within each tick
-4. **Mass transfer**: Conservation-aware mass movement between cells
+```bash
+python -m scenarios.stellar_screensaver \
+    --grid 256 \
+    --fps 60 \
+    --lod 1.0
 
-### High-Energy Events
-
-Events are triggered based on the compression index Z and local conditions:
-- **Fusion**: Creates heavier species, releases binding energy
-- **Decay**: Breaks species into lighter fragments
-- **Degenerate transition**: Converts to stiff degenerate matter
-- **Black hole formation**: Absorbs cell contents at extreme Z
+# Controls:
+#   ESC/Q: Quit
+#   SPACE: Pause
+#   R: Restart
+#   TAB: Toggle log scaling
+```
 
 ## Testing
 
-Run the full test suite:
-
 ```bash
-# Install pytest if needed
-pip install pytest
-
 # Run all tests
 pytest tests/ -v
 
-# Run specific test module
-pytest tests/test_fabric.py -v
-
 # Run with coverage
-pip install pytest-cov
-pytest tests/ --cov=. --cov-report=term-missing
+pytest tests/ --cov=core --cov=domains --cov-report=term
+
+# Run specific test categories
+pytest tests/test_determinism.py -v  # Determinism verification
+pytest tests/test_properties.py -v   # Property-based tests
+pytest tests/test_integration.py -v  # Integration tests
 ```
+
+## CI/CD
+
+GitHub Actions workflow runs:
+- Tests on Python 3.9, 3.10, 3.11, 3.12
+- Linting with ruff
+- Type checking with mypy
 
 ## Development
 
-### Adding New Species Properties
+### Adding New Physics
 
-1. Update `SpeciesRegistry` property definitions
-2. Implement property calculations in `MaterialsFundamentals`
-3. Use `registry.migrate_le_properties()` for existing species
+1. Create module in `domains/`
+2. Implement operator interface
+3. Hook into Quanta phase pipeline
+4. Add tests
 
-### Adding New Physical Effects
+### Adding New Events
 
-1. Create a new method in `MaterialsFundamentals`
-2. Hook into `handle_high_energy_events()` or `apply_global_ops()`
-3. Add appropriate tests in `tests/test_materials.py`
-
-### Extending the Core Engine
-
-1. Add new fields to `Fabric` if needed
-2. Update `EngineConfig` for new parameters
-3. Implement processing in `Quanta.resolve_cell()`
+1. Add event type to `EventType` enum
+2. Create helper function in `events.py`
+3. Emit from appropriate location
 
 ## License
 
-This project is provided for educational and research purposes.
+MIT License
 
 ## Contributing
 
-Contributions are welcome! Please:
 1. Fork the repository
 2. Create a feature branch
-3. Write tests for new functionality
-4. Ensure all tests pass
+3. Write tests (212+ and counting!)
+4. Ensure determinism tests pass
 5. Submit a pull request
-
-## Acknowledgments
-
-The Stratum architecture is inspired by multi-scale physics simulation systems and emergent behavior modeling frameworks.
