@@ -505,3 +505,56 @@ if __name__ == "__main__":
         fps=max(5, args.fps),
         gravity_strength=float(args.gravity),
     )
+
+
+def main():
+    """Entry point for the stellar screensaver."""
+    parser = argparse.ArgumentParser(
+        description="Stratum real‑time screensaver (density and temperature panels)"
+    )
+    parser.add_argument(
+        "--grid",
+        type=int,
+        default=0,
+        help="Grid size (width=height). Use 0 to auto‑fit to display.",
+    )
+    parser.add_argument(
+        "--microticks",
+        type=int,
+        default=50,
+        help="Microticks per simulation tick (inner relaxation steps).",
+    )
+    parser.add_argument(
+        "--scale",
+        type=int,
+        default=1,
+        help="Pixel scale factor per cell (default 1 = one cell per pixel).",
+    )
+    parser.add_argument(
+        "--lod",
+        type=float,
+        default=1.0,
+        help="Initial level of detail factor (0.05 <= LOD <= 1.0).",
+    )
+    parser.add_argument(
+        "--fps",
+        type=int,
+        default=30,
+        help="Target frames per second for dynamic LOD.",
+    )
+    parser.add_argument(
+        "--gravity",
+        type=float,
+        default=0.05,
+        help="Gravitational strength (higher = faster collapse).",
+    )
+    args = parser.parse_args()
+
+    run_stellar_screensaver(
+        grid_size=args.grid,
+        microticks_per_tick=max(1, args.microticks),
+        scale=max(1, args.scale),
+        lod_factor=_clamp(args.lod, 0.05, 1.0),
+        fps=max(5, args.fps),
+        gravity_strength=float(args.gravity),
+    )

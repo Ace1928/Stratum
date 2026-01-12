@@ -231,3 +231,82 @@ class Fabric:
             div[:, 0] += vy[:, 1] - vy[:, 0]
             div[:, -1] += -vy[:, -1]
         return div
+
+    def neighbors_4(self, i: int, j: int) -> list[tuple[int, int, bool]]:
+        """Return the 4-connected neighbors of cell (i, j) respecting boundary mode.
+        
+        Returns a list of (ni, nj, valid) tuples where:
+        - ni, nj are the neighbor coordinates (possibly wrapped/clamped)
+        - valid is True if this neighbor should be considered for transfers
+        
+        For PERIODIC boundaries, all 4 neighbors are valid.
+        For REFLECTIVE boundaries, edge neighbors are clamped (point to self).
+        For OPEN boundaries, out-of-bounds neighbors are marked invalid.
+        
+        Args:
+            i: X coordinate of the cell.
+            j: Y coordinate of the cell.
+            
+        Returns:
+            List of 4 tuples: [(right), (left), (up), (down)] with (ni, nj, valid).
+        """
+        W, H = self.cfg.grid_w, self.cfg.grid_h
+        result = []
+        
+        # Directions: +x, -x, +y, -y
+        deltas = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+        
+        for di, dj in deltas:
+            ni, nj = i + di, j + dj
+            
+            if self.cfg.boundary == "PERIODIC":
+                # Wrap around
+                result.append((ni % W, nj % H, True))
+            elif self.cfg.boundary == "REFLECTIVE":
+                # Clamp to edges (neighbor becomes self at boundaries)
+                clamped_i = max(0, min(ni, W - 1))
+                clamped_j = max(0, min(nj, H - 1))
+                # Valid only if different from self (not at boundary)
+                valid = (clamped_i != i or clamped_j != j)
+                result.append((clamped_i, clamped_j, valid))
+            else:
+                # OPEN: out-of-bounds is invalid
+                valid = (0 <= ni < W and 0 <= nj < H)
+                if valid:
+                    result.append((ni, nj, True))
+                else:
+                    # Return boundary index for reference but mark invalid
+                    result.append((max(0, min(ni, W - 1)), max(0, min(nj, H - 1)), False))
+        
+        return result
+
+    def get_neighbor_index(self, i: int, j: int, di: int, dj: int) -> tuple[int, int, bool]:
+        """Get the neighbor index with boundary handling.
+        
+        Args:
+            i: X coordinate of the cell.
+            j: Y coordinate of the cell.
+            di: X offset (-1, 0, or 1).
+            dj: Y offset (-1, 0, or 1).
+            
+        Returns:
+            Tuple of (ni, nj, valid) where valid indicates if transfer is allowed.
+        """
+        W, H = self.cfg.grid_w, self.cfg.grid_h
+        ni, nj = i + di, j + dj
+        
+        if self.cfg.boundary == "PERIODIC":
+            return (ni % W, nj % H, True)
+        elif self.cfg.boundary == "REFLECTIVE":
+            clamped_i = max(0, min(ni, W - 1))
+            clamped_j = max(0, min(nj, H - 1))
+            # For reflective, we allow transfer but it bounces back
+            # Mark as valid but coords point to boundary
+            return (clamped_i, clamped_j, True)
+        else:
+            # OPEN: only valid if in bounds
+            valid = (0 <= ni < W and 0 <= nj < H)
+            if valid:
+                return (ni, nj, True)
+            else:
+                return (i, j, False)  # Return self if out of bounds

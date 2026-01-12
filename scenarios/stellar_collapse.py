@@ -210,6 +210,24 @@ def run_stellar_collapse(
     print(f"Simulation complete. Snapshots saved to {output_dir}")
 
 
+def main():
+    """Entry point for the stellar collapse scenario."""
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Run stellar collapse simulation")
+    parser.add_argument("--grid", type=int, default=32, help="Grid size (width=height)")
+    parser.add_argument("--ticks", type=int, default=500, help="Number of ticks to run")
+    parser.add_argument("--microticks", type=int, default=500, help="Microticks per tick")
+    parser.add_argument("--output", type=str, default="./stellar_outputs", help="Output directory")
+    args = parser.parse_args()
+    
+    run_stellar_collapse(
+        grid_size=args.grid,
+        num_ticks=args.ticks,
+        microticks_per_tick=args.microticks,
+        output_dir=args.output,
+    )
+
+
 if __name__ == "__main__":
-    # Run default scenario when executed as a script
-    run_stellar_collapse()
+    main()

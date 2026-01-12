@@ -366,16 +366,23 @@ class MaterialsFundamentals:
         pressure support as gradient of pressure.  Higher ratios
         indicate likely collapse.
         """
-        W, H = self.cfg.grid_w, self.cfg.grid_h
-        # Finite difference gradient approximations using periodic wrap
+        # Use Fabric's boundary-aware neighbor indexing for all gradient calculations
         def grad(field, x, y):
-            xm = (x - 1) % W
-            xp = (x + 1) % W
-            ym = (y - 1) % H
-            yp = (y + 1) % H
-            gx = 0.5 * (field[xp, y] - field[xm, y])
-            gy = 0.5 * (field[x, yp] - field[x, ym])
+            xm, ym, valid_m = fabric.get_neighbor_index(x, y, -1, 0)
+            xp, yp, valid_p = fabric.get_neighbor_index(x, y, 1, 0)
+            xn, yn_m, valid_ym = fabric.get_neighbor_index(x, y, 0, -1)
+            xn2, yn_p, valid_yp = fabric.get_neighbor_index(x, y, 0, 1)
+            
+            # For invalid neighbors (OPEN boundary), use current cell value
+            val_xm = field[xm, y] if valid_m else field[x, y]
+            val_xp = field[xp, y] if valid_p else field[x, y]
+            val_ym = field[x, yn_m] if valid_ym else field[x, y]
+            val_yp = field[x, yn_p] if valid_yp else field[x, y]
+            
+            gx = 0.5 * (val_xp - val_xm)
+            gy = 0.5 * (val_yp - val_ym)
             return np.hypot(gx, gy)
+        
         # Approximate pressure using effective properties and cell state
         mix = fabric.mixtures[i][j]
         rho = fabric.rho[i, j]
@@ -384,19 +391,23 @@ class MaterialsFundamentals:
         T = fabric.E_heat[i, j] / max(rho, 1e-8)
         r = rho / max(rho_max_eff, 1e-8)
         P = chi_eff * (r ** self.cfg.eos_gamma) + self.cfg.thermal_pressure_coeff * rho * T
-        # Build synthetic pressure field around cell
+        
+        # Build synthetic pressure field around cell using boundary-aware indexing
         P_field = np.zeros((3, 3), dtype=float)
         for dx in range(-1, 2):
             for dy in range(-1, 2):
-                x = (i + dx) % W
-                y = (j + dy) % H
-                mix_n = fabric.mixtures[x][y]
-                rho_n = fabric.rho[x, y]
-                rho_max_eff_n = self.effective_property(mix_n, self.registry, "HE/rho_max")
-                chi_eff_n = self.effective_property(mix_n, self.registry, "HE/chi")
-                T_n = fabric.E_heat[x, y] / max(rho_n, 1e-8)
-                r_n = rho_n / max(rho_max_eff_n, 1e-8)
-                P_field[dx+1, dy+1] = chi_eff_n * (r_n ** self.cfg.eos_gamma) + self.cfg.thermal_pressure_coeff * rho_n * T_n
+                nx, ny, valid = fabric.get_neighbor_index(i, j, dx, dy)
+                if valid:
+                    mix_n = fabric.mixtures[nx][ny]
+                    rho_n = fabric.rho[nx, ny]
+                    rho_max_eff_n = self.effective_property(mix_n, self.registry, "HE/rho_max")
+                    chi_eff_n = self.effective_property(mix_n, self.registry, "HE/chi")
+                    T_n = fabric.E_heat[nx, ny] / max(rho_n, 1e-8)
+                    r_n = rho_n / max(rho_max_eff_n, 1e-8)
+                    P_field[dx+1, dy+1] = chi_eff_n * (r_n ** self.cfg.eos_gamma) + self.cfg.thermal_pressure_coeff * rho_n * T_n
+                else:
+                    # For OPEN boundaries, use current cell pressure
+                    P_field[dx+1, dy+1] = P
         # Pressure gradient magnitude
         gradP = np.hypot(P_field[2,1] - P_field[0,1], P_field[1,2] - P_field[1,0]) * 0.5
         # Influence gradient magnitude
