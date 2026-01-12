@@ -500,11 +500,15 @@ class Quanta:
                 pvec_after = Vec2(px[i, j], py[i, j])
                 Ekin_after = self.ledger.kinetic_energy(rho, pvec_after)
                 # Compute delta kinetic energy; ensure finite and non-negative.
-                raw_dE = Ekin_before - Ekin_after
-                if not math.isfinite(raw_dE) or raw_dE <= 0.0:
+                # Handle case where both energies are very large (could produce NaN)
+                if not math.isfinite(Ekin_before) or not math.isfinite(Ekin_after):
                     dE = 0.0
                 else:
-                    dE = raw_dE
+                    raw_dE = Ekin_before - Ekin_after
+                    if not math.isfinite(raw_dE) or raw_dE <= 0.0:
+                        dE = 0.0
+                    else:
+                        dE = min(raw_dE, 1e50)  # Cap to prevent overflow downstream
                 # convert to heat; allocate some to radiation based on opacity and T
                 f_rad = clamp((1.0 - opacity_eff) * (T / (T + 1.0)), 0.0, 1.0)
                 self.ledger.convert_kinetic_to_heat(i, j, dE, f_rad)

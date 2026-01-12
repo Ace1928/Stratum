@@ -210,6 +210,8 @@ class Ledger:
         if rho <= 1e-12:
             # negligible mass: treat kinetic energy as zero
             return 0.0
+        # Clamp rho to prevent overflow in the division
+        rho_clamped = min(rho, 1e150)
         # Compute squared momentum magnitude using multiplication to
         # avoid ``**`` overflow.  Use Python floats (double precision).
         px = float(p.x)
@@ -219,7 +221,11 @@ class Ledger:
         # 1e300 is within double precision range (~1e308).
         if not math.isfinite(sum_sq) or sum_sq > 1e300:
             sum_sq = 1e300
-        return sum_sq / (2.0 * rho)
+        result = sum_sq / (2.0 * rho_clamped)
+        # Final clamp to ensure result is finite
+        if not math.isfinite(result) or result > 1e100:
+            return 1e100
+        return result
 
     def barrier_crossed(
         self,

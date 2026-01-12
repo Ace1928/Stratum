@@ -388,12 +388,19 @@ class ConservationLedger:
         px = fabric.px
         py = fabric.py
         
-        # Avoid division by zero
-        mask = rho > 1e-12
+        # Avoid division by zero and overflow
+        mask = (rho > 1e-12) & np.isfinite(rho)
         ke = np.zeros_like(rho)
-        ke[mask] = (px[mask]**2 + py[mask]**2) / (2.0 * rho[mask])
         
-        # Clamp any infinities
+        # Clamp momentum to prevent overflow in squaring
+        px_safe = np.clip(px[mask], -1e75, 1e75)
+        py_safe = np.clip(py[mask], -1e75, 1e75)
+        rho_safe = np.clip(rho[mask], 1e-12, 1e150)
+        
+        ke[mask] = (px_safe**2 + py_safe**2) / (2.0 * rho_safe)
+        
+        # Clamp any infinities or NaNs
+        ke = np.where(np.isfinite(ke), ke, 0.0)
         ke = np.clip(ke, 0, 1e100)
         
         return float(np.sum(ke))
