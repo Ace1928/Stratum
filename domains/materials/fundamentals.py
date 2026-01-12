@@ -24,17 +24,28 @@ physics layer.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Dict, Tuple
 
 import numpy as np
 
-from ...core.config import EngineConfig
-from ...core.fabric import Fabric, Mixture
-from ...core.ledger import Ledger
-from ...core.types import Vec2
-from ...core.registry import SpeciesRegistry, Species
-from ...core.types import clamp
+try:
+    # When imported as part of the stratum package
+    from ...core.config import EngineConfig
+    from ...core.fabric import Fabric, Mixture
+    from ...core.ledger import Ledger
+    from ...core.types import Vec2
+    from ...core.registry import SpeciesRegistry, Species
+    from ...core.types import clamp
+except ImportError:
+    # When imported directly (e.g., during testing)
+    from core.config import EngineConfig
+    from core.fabric import Fabric, Mixture
+    from core.ledger import Ledger
+    from core.types import Vec2
+    from core.registry import SpeciesRegistry, Species
+    from core.types import clamp
 
 
 @dataclass
