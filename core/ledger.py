@@ -8,11 +8,16 @@ helpers for computing kinetic energy and converting energy between
 forms, and offers barrier evaluation with optional stochastic
 temperature tunnelling. All random draws are channelled through the
 ``EntropySource`` class to ensure deterministic replays and auditing.
+
+The entropy source uses blake2s for stable hash derivation, ensuring
+deterministic behavior across Python interpreter sessions and versions.
 """
 
 from __future__ import annotations
 
+import hashlib
 import math
+import struct
 from dataclasses import dataclass
 from typing import Dict
 
@@ -23,6 +28,16 @@ from .types import Vec2, dot, clamp
 
 @dataclass
 class EntropyRecord:
+    """Record of a single entropy sample for replay support.
+    
+    Attributes:
+        checkpoint_id: Identifier for the sampling checkpoint (e.g., "barrier:fusion").
+        tick: Simulation tick when the sample was drawn.
+        cell: Grid coordinates (i, j) of the cell.
+        attempt: Microtick attempt index within the cell.
+        conditioning_summary: Hash summary of conditioning parameters.
+        value: The sampled value in [0, 1].
+    """
     checkpoint_id: str
     tick: int
     cell: tuple[int, int]
@@ -32,9 +47,30 @@ class EntropyRecord:
 
 
 class EntropySource:
-    """Centralised source of pseudorandomness with replay support."""
+    """Centralised source of pseudorandomness with replay support.
+    
+    This class provides deterministic random number generation that is
+    stable across Python interpreter sessions. It uses blake2s for seed
+    derivation, ensuring that the same inputs always produce the same
+    outputs regardless of PYTHONHASHSEED settings.
+    
+    Attributes:
+        base_seed: The base seed for deterministic generation.
+        entropy_mode: If True, adds run-specific salt for variation.
+        replay_mode: If True, records samples for later replay.
+        run_salt: Random salt added when entropy_mode is True.
+        replay_log: List of recorded samples when replay_mode is True.
+        replay_cursor: Current position in replay_log during replay.
+    """
 
     def __init__(self, base_seed: int, entropy_mode: bool = False, replay_mode: bool = False):
+        """Initialize the entropy source.
+        
+        Args:
+            base_seed: Base seed for deterministic generation.
+            entropy_mode: If True, add run-specific variation.
+            replay_mode: If True, record samples for replay.
+        """
         self.base_seed = base_seed
         self.entropy_mode = entropy_mode
         self.replay_mode = replay_mode
@@ -43,10 +79,67 @@ class EntropySource:
         self.replay_cursor: int = 0
 
     def _derive_seed(self, checkpoint_id: str, tick: int, cell: tuple[int, int], attempt: int, cond_hash: int) -> int:
-        # Combine pieces into a 64‑bit integer seed deterministically.
-        return (
-            hash((self.base_seed, self.run_salt, checkpoint_id, tick, cell, attempt, cond_hash)) & 0xFFFFFFFFFFFF
-        )
+        """Derive a deterministic seed using blake2s hash.
+        
+        This method produces stable seeds across Python interpreter sessions
+        by using blake2s instead of Python's built-in hash() function.
+        
+        Args:
+            checkpoint_id: String identifier for the checkpoint.
+            tick: Current simulation tick.
+            cell: Grid cell coordinates (i, j).
+            attempt: Microtick attempt index.
+            cond_hash: Hash of conditioning parameters.
+            
+        Returns:
+            A 64-bit integer seed suitable for numpy's random generator.
+        """
+        # Build a canonical byte representation of all seed components
+        # Use blake2s for incremental hashing to avoid struct packing issues
+        h = hashlib.blake2s(digest_size=8)
+        
+        # Add each component as bytes in a canonical format
+        # Convert to Python int to ensure to_bytes works for numpy types
+        h.update(int(self.base_seed).to_bytes(8, byteorder='big', signed=True))
+        h.update(int(self.run_salt).to_bytes(8, byteorder='big', signed=False))
+        h.update(int(tick).to_bytes(8, byteorder='big', signed=True))
+        h.update(int(cell[0]).to_bytes(4, byteorder='big', signed=True))
+        h.update(int(cell[1]).to_bytes(4, byteorder='big', signed=True))
+        h.update(int(attempt).to_bytes(4, byteorder='big', signed=True))
+        # cond_hash is unsigned 64-bit from blake2s
+        h.update((int(cond_hash) & 0xFFFFFFFFFFFFFFFF).to_bytes(8, byteorder='big', signed=False))
+        # Add checkpoint_id as UTF-8 bytes
+        h.update(checkpoint_id.encode('utf-8'))
+        
+        # Convert 8-byte digest to unsigned 64-bit integer
+        return int.from_bytes(h.digest(), byteorder='big', signed=False)
+
+    def _hash_conditioning(self, conditioning: Dict[str, float]) -> int:
+        """Compute a stable hash of conditioning parameters.
+        
+        Uses blake2s to hash the sorted key-value pairs, ensuring
+        deterministic results across Python sessions.
+        
+        Args:
+            conditioning: Dictionary of conditioning parameters.
+            
+        Returns:
+            A 64-bit integer hash of the conditioning dict.
+        """
+        if not conditioning:
+            return 0
+        
+        # Build canonical representation: sorted key-value pairs
+        # Round floats to 6 decimal places for stability
+        h = hashlib.blake2s(digest_size=8)
+        for k in sorted(conditioning.keys()):
+            v = conditioning[k]
+            # Pack key and rounded value as bytes
+            h.update(k.encode('utf-8'))
+            # Use struct.pack for double precision float
+            h.update(struct.pack('>d', round(v, 6)))
+        
+        return int.from_bytes(h.digest(), byteorder='big', signed=False)
 
     def sample_uniform(self, checkpoint_id: str, tick: int, cell: tuple[int, int], attempt: int, conditioning: Dict[str, float]) -> float:
         """Return a uniform random sample in [0,1].
@@ -55,19 +148,36 @@ class EntropySource:
         checkpoint id and conditioning values. When ``replay_mode`` is
         enabled, previously recorded samples are returned instead of
         generating new ones.
+        
+        This method uses blake2s for hash derivation, ensuring stable
+        results across Python interpreter sessions regardless of
+        PYTHONHASHSEED settings.
+        
+        Args:
+            checkpoint_id: Identifier for the sampling checkpoint.
+            tick: Current simulation tick.
+            cell: Grid cell coordinates (i, j).
+            attempt: Microtick attempt index.
+            conditioning: Dictionary of conditioning parameters.
+            
+        Returns:
+            A uniform random sample in [0, 1].
         """
         if self.replay_mode and self.replay_cursor < len(self.replay_log):
             rec = self.replay_log[self.replay_cursor]
             self.replay_cursor += 1
             return rec.value
-        # compute a summary hash of conditioning dict to incorporate into seed
-        cond_hash = 0
-        for k, v in sorted(conditioning.items()):
-            cond_hash ^= hash((k, round(v, 6)))
+        
+        # Compute stable hash of conditioning parameters
+        cond_hash = self._hash_conditioning(conditioning)
+        
+        # Derive seed using blake2s
         seed = self._derive_seed(checkpoint_id, tick, cell, attempt, cond_hash)
-        # Use Python's built in PRNG to avoid dependencies
+        
+        # Use numpy's random generator with the derived seed
         rng = np.random.default_rng(seed)
         u = float(rng.random())
+        
         if self.replay_mode:
             self.replay_log.append(
                 EntropyRecord(
