@@ -23,12 +23,12 @@ import numpy as np
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.config import EngineConfig, DeterminismMode
-from core.fabric import Fabric
-from core.ledger import Ledger
-from core.quanta import Quanta
-from core.registry import SpeciesRegistry
-from domains.materials.fundamentals import MaterialsFundamentals
+from stratum.core.config import EngineConfig, DeterminismMode
+from stratum.core.fabric import Fabric
+from stratum.core.ledger import Ledger
+from stratum.core.quanta import Quanta
+from stratum.core.registry import SpeciesRegistry
+from stratum.domains.materials.fundamentals import MaterialsFundamentals
 
 
 def benchmark_simulation(

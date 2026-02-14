@@ -12,7 +12,7 @@ import os
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from util.classregistry import ClassRegistry
+from stratum.util.classregistry import ClassRegistry
 
 
 class TestClassRegistry(unittest.TestCase):
@@ -21,11 +21,11 @@ class TestClassRegistry(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         # Use the local package path
-        self.registry = ClassRegistry(root_package='core')
+        self.registry = ClassRegistry(root_package='stratum')
 
     def test_initialization(self):
         """Test ClassRegistry initialization."""
-        self.assertEqual(self.registry.root_package, 'core')
+        self.assertEqual(self.registry.root_package, 'stratum')
         self.assertIsInstance(self.registry._module_cache, dict)
 
     def test_list_modules(self):
@@ -37,13 +37,13 @@ class TestClassRegistry(unittest.TestCase):
 
     def test_load_module(self):
         """Test loading a module by name."""
-        module = self.registry.load_module('core.types')
+        module = self.registry.load_module('stratum.core.types')
         self.assertIsNotNone(module)
 
     def test_load_module_caches(self):
         """Test that loaded modules are cached."""
-        mod1 = self.registry.load_module('core.types')
-        mod2 = self.registry.load_module('core.types')
+        mod1 = self.registry.load_module('stratum.core.types')
+        mod2 = self.registry.load_module('stratum.core.types')
         self.assertIs(mod1, mod2)
 
     def test_load_module_invalid(self):
@@ -53,7 +53,7 @@ class TestClassRegistry(unittest.TestCase):
 
     def test_list_classes(self):
         """Test listing classes in a module."""
-        classes = self.registry.list_classes('core.types')
+        classes = self.registry.list_classes('stratum.core.types')
         self.assertIsInstance(classes, list)
         self.assertIn('Vec2', classes)
         self.assertIn('Cell', classes)
@@ -65,7 +65,7 @@ class TestClassRegistry(unittest.TestCase):
 
     def test_list_functions(self):
         """Test listing functions in a module."""
-        functions = self.registry.list_functions('core.types')
+        functions = self.registry.list_functions('stratum.core.types')
         self.assertIsInstance(functions, list)
         self.assertIn('dot', functions)
         self.assertIn('clamp', functions)
@@ -77,20 +77,20 @@ class TestClassRegistry(unittest.TestCase):
 
     def test_get_source_class(self):
         """Test getting source code for a class."""
-        source = self.registry.get_source('core.types', 'Vec2')
+        source = self.registry.get_source('stratum.core.types', 'Vec2')
         self.assertIsInstance(source, str)
         self.assertIn('class Vec2', source)
         self.assertIn('def __add__', source)
 
     def test_get_source_function(self):
         """Test getting source code for a function."""
-        source = self.registry.get_source('core.types', 'clamp')
+        source = self.registry.get_source('stratum.core.types', 'clamp')
         self.assertIsInstance(source, str)
         self.assertIn('def clamp', source)
 
     def test_get_source_nonexistent_object(self):
         """Test getting source for nonexistent object returns None."""
-        source = self.registry.get_source('core.types', 'NonexistentClass')
+        source = self.registry.get_source('stratum.core.types', 'NonexistentClass')
         self.assertIsNone(source)
 
     def test_get_source_invalid_module(self):
@@ -104,17 +104,17 @@ class TestClassRegistryFabric(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.registry = ClassRegistry(root_package='core')
+        self.registry = ClassRegistry(root_package='stratum')
 
     def test_list_classes_fabric(self):
         """Test listing classes in fabric module."""
-        classes = self.registry.list_classes('core.fabric')
+        classes = self.registry.list_classes('stratum.core.fabric')
         self.assertIn('Fabric', classes)
         self.assertIn('Mixture', classes)
 
     def test_get_source_fabric(self):
         """Test getting Fabric class source."""
-        source = self.registry.get_source('core.fabric', 'Fabric')
+        source = self.registry.get_source('stratum.core.fabric', 'Fabric')
         self.assertIsInstance(source, str)
         self.assertIn('class Fabric', source)
 
@@ -124,11 +124,11 @@ class TestClassRegistryLedger(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.registry = ClassRegistry(root_package='core')
+        self.registry = ClassRegistry(root_package='stratum')
 
     def test_list_classes_ledger(self):
         """Test listing classes in ledger module."""
-        classes = self.registry.list_classes('core.ledger')
+        classes = self.registry.list_classes('stratum.core.ledger')
         self.assertIn('Ledger', classes)
         self.assertIn('EntropySource', classes)
         self.assertIn('EntropyRecord', classes)
@@ -139,11 +139,11 @@ class TestClassRegistryConfig(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.registry = ClassRegistry(root_package='core')
+        self.registry = ClassRegistry(root_package='stratum')
 
     def test_list_classes_config(self):
         """Test listing classes in config module."""
-        classes = self.registry.list_classes('core.config')
+        classes = self.registry.list_classes('stratum.core.config')
         self.assertIn('EngineConfig', classes)
 
 

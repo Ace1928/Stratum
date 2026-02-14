@@ -23,12 +23,12 @@ import numpy as np
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.config import EngineConfig, DeterminismMode
-from core.fabric import Fabric
-from core.ledger import Ledger
-from core.quanta import Quanta
-from core.registry import SpeciesRegistry
-from domains.materials.fundamentals import MaterialsFundamentals
+from stratum.core.config import EngineConfig, DeterminismMode
+from stratum.core.fabric import Fabric
+from stratum.core.ledger import Ledger
+from stratum.core.quanta import Quanta
+from stratum.core.registry import SpeciesRegistry
+from stratum.domains.materials.fundamentals import MaterialsFundamentals
 
 
 class TestGoldenChecksum(unittest.TestCase):
@@ -362,7 +362,7 @@ class TestEntropyDeterminism(unittest.TestCase):
 
     def test_blake2s_hash_stability(self):
         """Test that blake2s hashing produces consistent results."""
-        from core.ledger import EntropySource
+        from stratum.core.ledger import EntropySource
         
         # Create entropy source
         source = EntropySource(base_seed=42, entropy_mode=False)
@@ -387,7 +387,7 @@ class TestEntropyDeterminism(unittest.TestCase):
 
     def test_different_inputs_different_samples(self):
         """Test that different inputs produce different samples."""
-        from core.ledger import EntropySource
+        from stratum.core.ledger import EntropySource
         
         source = EntropySource(base_seed=42, entropy_mode=False)
         

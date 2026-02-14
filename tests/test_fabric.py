@@ -14,8 +14,8 @@ import numpy as np
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.fabric import Fabric, Mixture
-from core.config import EngineConfig
+from stratum.core.fabric import Fabric, Mixture
+from stratum.core.config import EngineConfig
 
 
 class TestMixture(unittest.TestCase):

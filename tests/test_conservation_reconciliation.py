@@ -17,13 +17,13 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.config import EngineConfig, DeterminismMode
-from core.fabric import Fabric
-from core.ledger import Ledger
-from core.quanta import Quanta
-from core.registry import SpeciesRegistry
-from core.conservation import ConservationLedger
-from domains.materials.fundamentals import MaterialsFundamentals
+from stratum.core.config import EngineConfig, DeterminismMode
+from stratum.core.fabric import Fabric
+from stratum.core.ledger import Ledger
+from stratum.core.quanta import Quanta
+from stratum.core.registry import SpeciesRegistry
+from stratum.core.conservation import ConservationLedger
+from stratum.domains.materials.fundamentals import MaterialsFundamentals
 
 
 class TestConservationReconciliation(unittest.TestCase):
@@ -201,7 +201,7 @@ class TestLedgerReconciliation(unittest.TestCase):
 
     def test_ledger_balance_equation(self):
         """Test that ΔTotal ≈ Sources - Sinks - BoundaryOutflow."""
-        from core.conservation import ConservationLedger, FluxType
+        from stratum.core.conservation import ConservationLedger, FluxType
         
         ledger = ConservationLedger(tolerance=1e-9)
         

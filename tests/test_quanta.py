@@ -16,12 +16,12 @@ import numpy as np
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.quanta import Quanta, Signal, SignalQueue, SignalType
-from core.fabric import Fabric
-from core.ledger import Ledger
-from core.config import EngineConfig
-from core.registry import SpeciesRegistry
-from core.types import Vec2
+from stratum.core.quanta import Quanta, Signal, SignalQueue, SignalType
+from stratum.core.fabric import Fabric
+from stratum.core.ledger import Ledger
+from stratum.core.config import EngineConfig
+from stratum.core.registry import SpeciesRegistry
+from stratum.core.types import Vec2
 
 
 # Helper to create a minimal MaterialsFundamentals mock

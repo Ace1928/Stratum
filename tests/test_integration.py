@@ -16,13 +16,13 @@ import numpy as np
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.config import EngineConfig
-from core.fabric import Fabric
-from core.ledger import Ledger
-from core.metronome import Metronome
-from core.quanta import Quanta
-from core.registry import SpeciesRegistry
-from domains.materials.fundamentals import MaterialsFundamentals
+from stratum.core.config import EngineConfig
+from stratum.core.fabric import Fabric
+from stratum.core.ledger import Ledger
+from stratum.core.metronome import Metronome
+from stratum.core.quanta import Quanta
+from stratum.core.registry import SpeciesRegistry
+from stratum.domains.materials.fundamentals import MaterialsFundamentals
 
 
 class TestSimulationPipeline(unittest.TestCase):

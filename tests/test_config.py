@@ -11,7 +11,7 @@ import os
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.config import EngineConfig
+from stratum.core.config import EngineConfig
 
 
 class TestEngineConfig(unittest.TestCase):

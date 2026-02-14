@@ -15,10 +15,10 @@ import numpy as np
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.ledger import Ledger, EntropySource, EntropyRecord
-from core.fabric import Fabric
-from core.config import EngineConfig
-from core.types import Vec2
+from stratum.core.ledger import Ledger, EntropySource, EntropyRecord
+from stratum.core.fabric import Fabric
+from stratum.core.config import EngineConfig
+from stratum.core.types import Vec2
 
 
 class TestEntropyRecord(unittest.TestCase):

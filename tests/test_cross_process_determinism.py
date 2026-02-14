@@ -35,12 +35,12 @@ sys.path.insert(0, REPO_ROOT)
 
 import numpy as np
 
-from core.config import EngineConfig, DeterminismMode
-from core.fabric import Fabric
-from core.ledger import Ledger
-from core.quanta import Quanta
-from core.registry import SpeciesRegistry
-from domains.materials.fundamentals import MaterialsFundamentals
+from stratum.core.config import EngineConfig, DeterminismMode
+from stratum.core.fabric import Fabric
+from stratum.core.ledger import Ledger
+from stratum.core.quanta import Quanta
+from stratum.core.registry import SpeciesRegistry
+from stratum.domains.materials.fundamentals import MaterialsFundamentals
 
 def hash_array(arr):
     h = hashlib.sha256()

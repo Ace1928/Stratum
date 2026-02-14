@@ -15,7 +15,7 @@ import shutil
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.registry import SpeciesRegistry, Species
+from stratum.core.registry import SpeciesRegistry, Species
 
 
 class TestSpecies(unittest.TestCase):

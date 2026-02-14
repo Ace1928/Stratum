@@ -11,8 +11,8 @@ import os
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.metronome import Metronome, MetronomeStats
-from core.config import EngineConfig
+from stratum.core.metronome import Metronome, MetronomeStats
+from stratum.core.config import EngineConfig
 
 
 class TestMetronomeStats(unittest.TestCase):

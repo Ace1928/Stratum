@@ -16,12 +16,12 @@ import numpy as np
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.config import EngineConfig
-from core.fabric import Fabric, Mixture
-from core.ledger import Ledger, EntropySource
-from core.registry import SpeciesRegistry
-from core.types import Vec2
-from domains.materials.fundamentals import MaterialsFundamentals, MaterialDefinition
+from stratum.core.config import EngineConfig
+from stratum.core.fabric import Fabric, Mixture
+from stratum.core.ledger import Ledger, EntropySource
+from stratum.core.registry import SpeciesRegistry
+from stratum.core.types import Vec2
+from stratum.domains.materials.fundamentals import MaterialsFundamentals, MaterialDefinition
 
 
 class TestMaterialDefinition(unittest.TestCase):
