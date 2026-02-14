@@ -13,8 +13,7 @@ The major subpackages are:
                        event-driven microtick engine (Quanta).
 ``stratum.domains``    Domain definitions for high‑energy materials,
                        chemistry and other physics submodules.
-``stratum.render``     Simple rendering utilities for visualising
-                       simulation state.
+``stratum.util``       Utility helpers for introspection and tooling.
 ``stratum.scenarios``  Entry points defining specific simulation
                        scenarios (e.g. uniform stellar gas collapse).
 
@@ -24,6 +23,6 @@ Please see the individual modules for further documentation.
 __all__ = [
     "core",
     "domains",
-    "render",
+    "util",
     "scenarios",
 ]
